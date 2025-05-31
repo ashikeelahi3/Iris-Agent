@@ -1,5 +1,4 @@
 import Papa from 'papaparse';
-// @ts-ignore
 import { mean, median, deviation } from 'd3-array';
 
 export interface IrisData {
