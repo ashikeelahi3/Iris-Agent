@@ -16,6 +16,8 @@ A comprehensive statistical analysis platform for the famous Iris dataset, power
 - **Species Distribution**: Sample counts and percentages across iris species
 - **Comparative Analysis**: Cross-species feature comparisons
 - **Dataset Summary**: Comprehensive overview of the entire dataset
+- **Comprehensive Species Analysis**: Mean values for all 4 features by species
+- **Bivariate Correlation Analysis**: Correlation matrix between all feature pairs with strength indicators
 
 ### Real-time Data Integration
 - Dynamic loading of 150 iris samples from CSV data

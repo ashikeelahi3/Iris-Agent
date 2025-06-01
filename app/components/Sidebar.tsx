@@ -23,7 +23,7 @@ interface Message {
 export default function Sidebar() {  const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      content: 'Hello! I\'m an AI Statistical Analysis Assistant specialized in the Iris dataset. I can help you analyze the famous iris flower dataset with 150 samples across 3 species.\n\n🌸 **Try asking me:**\n• "What are the statistics for sepal length?"\n• "Show me the species distribution"\n• "Compare petal width across different species"\n• "Give me a dataset summary"\n• "Mean of each species" (shows all 4 feature means)\n• "What is the mean sepal length for each species?"',
+      content: 'Hello! I\'m an AI Statistical Analysis Assistant specialized in the Iris dataset. I can help you analyze the famous iris flower dataset with 150 samples across 3 species.\n\n🌸 **Try asking me:**\n• "What are the statistics for sepal length?"\n• "Show me the species distribution"\n• "Compare petal width across different species"\n• "Give me a dataset summary"\n• "Mean of each species" (shows all 4 feature means)\n• "What correlations exist between features?"\n• "Show me bivariate correlations for the dataset"',
       isUser: false,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }

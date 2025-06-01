@@ -150,12 +150,74 @@ async function getAllFeatureMeansBySpecies() {
   }
 }
 
+async function getBivariateCorrelations() {
+  try {
+    const data = await loadIrisData();
+    const validFeatures = ['SepalLengthCm', 'SepalWidthCm', 'PetalLengthCm', 'PetalWidthCm'];
+    
+    // Calculate correlation matrix
+    const correlations: { [key: string]: { [key: string]: number } } = {};
+    
+    for (const feature1 of validFeatures) {
+      correlations[feature1] = {};
+      for (const feature2 of validFeatures) {
+        const data1 = getFeatureData(data, feature1 as any);
+        const data2 = getFeatureData(data, feature2 as any);
+        correlations[feature1][feature2] = calculateCorrelation(data1, data2);
+      }
+    }
+    
+    // Format as table
+    let result = 'Bivariate Correlation Matrix:\n\n';
+    result += 'Feature'.padEnd(16) + validFeatures.map(f => f.replace('Cm', '').padEnd(12)).join('') + '\n';
+    result += '-'.repeat(16 + validFeatures.length * 12) + '\n';
+    
+    for (const feature1 of validFeatures) {
+      result += feature1.replace('Cm', '').padEnd(16);
+      for (const feature2 of validFeatures) {
+        const corr = correlations[feature1][feature2];
+        result += corr.toFixed(3).padEnd(12);
+      }
+      result += '\n';
+    }
+    
+    result += '\nInterpretation:\n';
+    result += '• 1.0 = Perfect positive correlation\n';
+    result += '• 0.0 = No correlation\n';
+    result += '• -1.0 = Perfect negative correlation\n';
+    result += '• |r| > 0.7 = Strong correlation\n';
+    result += '• |r| > 0.3 = Moderate correlation\n';
+    
+    return result;
+  } catch (error) {
+    return `Error calculating bivariate correlations: ${error}`;
+  }
+}
+
+// Helper function to calculate Pearson correlation coefficient
+function calculateCorrelation(x: number[], y: number[]): number {
+  const n = x.length;
+  if (n !== y.length || n === 0) return 0;
+  
+  const sumX = x.reduce((a, b) => a + b, 0);
+  const sumY = y.reduce((a, b) => a + b, 0);
+  const sumXY = x.reduce((acc, xi, i) => acc + xi * y[i], 0);
+  const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0);
+  const sumY2 = y.reduce((acc, yi) => acc + yi * yi, 0);
+  
+  const numerator = n * sumXY - sumX * sumY;
+  const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+  
+  return denominator === 0 ? 0 : numerator / denominator;
+}
+
 const tools = {
   "calculateFeatureStatistics": calculateFeatureStatistics,
   "getSpeciesDistribution": getSpeciesDistribution,
   "compareFeaturesBySpecies": compareFeaturesBySpecies,
   "getDatasetSummary": getDatasetSummary,
-  "getAllFeatureMeansBySpecies": getAllFeatureMeansBySpecies
+  "getAllFeatureMeansBySpecies": getAllFeatureMeansBySpecies,
+  "getBivariateCorrelations": getBivariateCorrelations
 }
 
 const SYSTEM_PROMPT = `
@@ -183,6 +245,14 @@ Available Statistical Analysis Tools:
 - function getAllFeatureMeansBySpecies(): string
   Calculates the mean values for ALL 4 features (SepalLengthCm, SepalWidthCm, PetalLengthCm, PetalWidthCm) for each species
   Use this when user asks for "mean of each species", "all feature means by species", or similar comprehensive requests
+
+- function getBivariateCorrelations(): string
+  Calculates correlation matrix between all feature pairs, showing relationships between variables
+  Use this when user asks for "correlations", "bivariate analysis", "feature relationships", or "correlation table"
+
+- function getBivariateCorrelations(): string
+  Calculates bivariate correlations between all feature pairs and returns a correlation matrix
+  Features: SepalLengthCm, SepalWidthCm, PetalLengthCm, PetalWidthCm
 
 Example JSON workflow for comprehensive species analysis:
 START
