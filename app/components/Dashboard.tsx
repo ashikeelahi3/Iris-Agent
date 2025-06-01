@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { IrisData, Statistics, loadIrisData, calculateStatistics, getFeatureData, countBySpecies } from '../utils/data';
+import BivariateTable from './BivariateTable';
 
 interface Metric {
   label: string;
@@ -119,8 +120,12 @@ export default function Dashboard() {
                 <span className="text-gray-900 font-medium">{count}</span>
               </div>
             ))}
-          </div>
-        </div>
+          </div>        </div>
+      </div>
+
+      {/* Bivariate Correlation Analysis Section */}
+      <div className="w-full">
+        <BivariateTable />
       </div>
     </div>
   );
