@@ -23,7 +23,7 @@ interface Message {
 export default function Sidebar() {  const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      content: 'Hello! I\'m an AI Agent that can help you with weather information for Bangladeshi cities. I can provide weather details for Rajshahi, Naogaon, Dhaka, and Rangpur.\n\nTry asking me:\n• "What\'s the weather in Dhaka?"\n• "What is the sum of weather of Rajshahi and Naogaon?"\n• "Compare the temperatures of all cities"',
+      content: 'Hello! I\'m an AI Statistical Analysis Assistant specialized in the Iris dataset. I can help you analyze the famous iris flower dataset with 150 samples across 3 species.\n\n🌸 **Try asking me:**\n• "What are the statistics for sepal length?"\n• "Show me the species distribution"\n• "Compare petal width across different species"\n• "Give me a dataset summary"\n• "Mean of each species" (shows all 4 feature means)\n• "What is the mean sepal length for each species?"',
       isUser: false,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
@@ -147,12 +147,12 @@ export default function Sidebar() {  const [messages, setMessages] = useState<Me
         <div className="flex items-center p-2.5 border-b border-gray-200">
           <Image
             src="/avatar.png"
-            alt="AI Assistant"
+            alt="Statistical Analysis Assistant"
             width={32}
             height={32}
             className="rounded-full"
           />
-          <span className="ml-2 font-semibold text-gray-900">AI Assistant</span>
+          <span className="ml-2 font-semibold text-gray-900">Statistical Analysis Assistant</span>
         </div>        <div className="flex-1 overflow-y-auto p-2.5 space-y-4">          {messages.map((message) => (
             <Message
               key={message.id}
