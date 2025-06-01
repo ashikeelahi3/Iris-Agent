@@ -1,9 +1,27 @@
 'use client';
 
-import { useDashboard } from '../context/DashboardContext';
+import { useState } from 'react';
+import BivariateTable from './BivariateTable';
+
+interface AnalysisResult {
+  type: 'bivariate' | 'feature' | 'species' | 'summary';
+  title: string;
+  component: React.ReactNode;
+  timestamp: string;
+}
 
 export default function Dashboard() {
-  const { analysisResults } = useDashboard();
+  const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Function to add analysis results (this could be called from parent or context)
+  const addAnalysisResult = (result: AnalysisResult) => {
+    setAnalysisResults(prev => [result, ...prev]);
+  };
+
+  if (loading) {
+    return <div className="p-6 text-center">Loading...</div>;
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -42,14 +60,11 @@ export default function Dashboard() {
       ) : (
         // Analysis results
         <div className="space-y-6">
-          {analysisResults.map((result) => (
-            <div key={result.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          {analysisResults.map((result, index) => (
+            <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
                 <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{result.title}</h3>
-                    <p className="text-sm text-gray-600 mt-1">Query: "{result.query}"</p>
-                  </div>
+                  <h3 className="font-semibold text-gray-900">{result.title}</h3>
                   <span className="text-sm text-gray-500">{result.timestamp}</span>
                 </div>
               </div>

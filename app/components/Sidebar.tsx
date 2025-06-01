@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import Message from './Message';
 import Image from 'next/image';
 import styles from './loading.module.css';
+import { useDashboard } from '../context/DashboardContext';
+import BivariateTable from './BivariateTable';
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
   id: number;
@@ -20,7 +23,9 @@ interface Message {
   }>;
 }
 
-export default function Sidebar() {  const [messages, setMessages] = useState<Message[]>([
+export default function Sidebar() {
+  const { addAnalysisResult } = useDashboard();
+  const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
       content: 'Hello! I\'m an AI Statistical Analysis Assistant specialized in the Iris dataset. I can help you analyze the famous iris flower dataset with 150 samples across 3 species.\n\n🌸 **Try asking me:**\n• "What are the statistics for sepal length?"\n• "Show me the species distribution"\n• "Compare petal width across different species"\n• "Give me a dataset summary"\n• "Mean of each species" (shows all 4 feature means)\n• "What correlations exist between features?"\n• "Show me bivariate correlations for the dataset"',
@@ -38,6 +43,71 @@ export default function Sidebar() {  const [messages, setMessages] = useState<Me
       main.dataset.expanded = (!isCollapsed).toString();
     }
   }, [isCollapsed]);
+  const formatResponse = (response: any): string => {
+    if (typeof response === 'string') return response;
+    if (typeof response === 'object' && response !== null) {
+      const sections = Object.entries(response).map(([key, value]) => {
+        let content = '';
+        if (Array.isArray(value)) {
+          content = value.map(item => `- ${item}`).join('\n');
+        } else if (typeof value === 'object' && value !== null) {
+          content = Object.entries(value)
+            .map(([k, v]) => `- **${k}**: ${v}`)
+            .join('\n');
+        } else {
+          content = String(value);
+        }
+        return `## ${key}\n\n${content}`;
+      });
+      return sections.join('\n\n');
+    }
+    return String(response);
+  };
+
+  const addAnalysisResultToDashboard = (query: string, response: any, steps: any[]) => {
+    const queryLower = query.toLowerCase();
+    const responseStr = formatResponse(response);
+    const responseLower = responseStr.toLowerCase();
+    
+    // Detect bivariate/correlation analysis
+    if (queryLower.includes('correlation') || queryLower.includes('bivariate') || 
+        responseLower.includes('correlation matrix') || responseLower.includes('bivariate')) {
+      addAnalysisResult({
+        type: 'bivariate',
+        title: 'Bivariate Correlation Analysis',
+        component: <BivariateTable showOnMount={true} />,
+        query: query
+      });
+    }
+    // Detect feature statistics
+    else if (queryLower.includes('statistics') || queryLower.includes('mean') || 
+             queryLower.includes('standard deviation') || queryLower.includes('feature')) {
+      addAnalysisResult({
+        type: 'feature',
+        title: 'Feature Statistics Analysis',
+        component: (
+          <div className="prose prose-sm max-w-none">
+            <ReactMarkdown>{responseStr}</ReactMarkdown>
+          </div>
+        ),
+        query: query
+      });
+    }
+    // Detect species comparison or any other type
+    else {
+      addAnalysisResult({
+        type: 'summary',
+        title: 'Analysis Result',
+        component: (
+          <div className="prose prose-sm max-w-none">
+            <ReactMarkdown>{responseStr}</ReactMarkdown>
+          </div>
+        ),
+        query: query
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim() || isLoading) return;
@@ -52,14 +122,13 @@ export default function Sidebar() {  const [messages, setMessages] = useState<Me
     const currentMessage = inputMessage;
     setMessages(prev => [...prev, userMessage]);
     setInputMessage('');
-    setIsLoading(true);    try {
-      // Prepare conversation history for the API
+    setIsLoading(true);
+
+    try {
       const conversationHistory = messages.map(msg => ({
         role: msg.isUser ? 'user' as const : 'assistant' as const,
         content: msg.content
       }));
-
-      console.log('Sending request to API:', { message: currentMessage, conversationHistoryLength: conversationHistory.length });
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -72,44 +141,31 @@ export default function Sidebar() {  const [messages, setMessages] = useState<Me
         }),
       });
 
-      console.log('API response status:', response.status);
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
 
       const data = await response.json();
-      console.log('API response data:', data);
-
-      if (!response.ok) {
-        console.error('API error response:', data);
-        throw new Error(data.error || `API request failed with status ${response.status}`);
-      }
 
       if (!data.reply) {
-        console.error('No reply in response:', data);
         throw new Error('No reply received from AI Agent');
-      }
-
-      const aiMessage: Message = {
+      }      const aiMessage: Message = {
         id: Date.now(),
-        content: data.reply,
+        content: typeof data.reply === 'string' ? data.reply : data.reply,
         isUser: false,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         steps: data.steps || []
       };
 
       setMessages(prev => [...prev, aiMessage]);
+      addAnalysisResultToDashboard(currentMessage, data.reply, data.steps);
 
     } catch (error) {
       console.error('Error sending message:', error);
       
-      let errorContent = `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`;
-      
-      // Add more specific error information for debugging
-      if (error instanceof Error && error.message.includes('Failed to fetch')) {
-        errorContent = 'Network error: Unable to connect to the AI service. Please check your connection and try again.';
-      }
-      
       const errorMessage: Message = {
         id: Date.now(),
-        content: errorContent,
+        content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
         isUser: false,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
@@ -153,7 +209,10 @@ export default function Sidebar() {  const [messages, setMessages] = useState<Me
             className="rounded-full"
           />
           <span className="ml-2 font-semibold text-gray-900">Statistical Analysis Assistant</span>
-        </div>        <div className="flex-1 overflow-y-auto p-2.5 space-y-4">          {messages.map((message) => (
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-2.5 space-y-4">
+          {messages.map((message) => (
             <Message
               key={message.id}
               content={message.content}
@@ -175,7 +234,8 @@ export default function Sidebar() {  const [messages, setMessages] = useState<Me
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200 bg-white">
-          <div className="flex items-center space-x-2">            <input
+          <div className="flex items-center space-x-2">
+            <input
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}

@@ -3,6 +3,7 @@ import { ClerkProvider } from '@clerk/nextjs'
 import { Geist, Geist_Mono } from 'next/font/google';
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
+import { DashboardProvider } from "./context/DashboardContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,18 +25,19 @@ export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>) {
-  return (
+}>) {  return (
     <ClerkProvider>
       <html lang="en">
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          <Header />
-          <Sidebar />
-          <main className="ml-12 transition-[margin] duration-300 data-[expanded=true]:ml-[300px] pt-16 min-h-screen">
-            {children}
-          </main>
+          <DashboardProvider>
+            <Header />
+            <Sidebar />
+            <main className="ml-12 transition-[margin] duration-300 data-[expanded=true]:ml-[300px] pt-16 min-h-screen">
+              {children}
+            </main>
+          </DashboardProvider>
         </body>
       </html>
     </ClerkProvider>

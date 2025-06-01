@@ -42,15 +42,22 @@ function getCorrelationColor(corr: number): string {
   return 'text-gray-500';
 }
 
-export default function BivariateTable() {
+interface BivariateTableProps {
+  showOnMount?: boolean;
+}
+
+export default function BivariateTable({ showOnMount = false }: BivariateTableProps) {
   const [correlationMatrix, setCorrelationMatrix] = useState<{ [key: string]: { [key: string]: number } }>({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(showOnMount);
   const [error, setError] = useState<string | null>(null);
+  const [shouldCalculate, setShouldCalculate] = useState(showOnMount);
 
   const features = ['SepalLengthCm', 'SepalWidthCm', 'PetalLengthCm', 'PetalWidthCm'];
   const featureLabels = ['Sepal Length', 'Sepal Width', 'Petal Length', 'Petal Width'];
 
   useEffect(() => {
+    if (!shouldCalculate) return;
+    
     async function calculateCorrelations() {
       try {
         setLoading(true);
@@ -75,10 +82,30 @@ export default function BivariateTable() {
       } finally {
         setLoading(false);
       }
-    }
+    }    calculateCorrelations();
+  }, [shouldCalculate]);
 
-    calculateCorrelations();
-  }, []);
+  // Function to trigger calculation manually
+  const triggerCalculation = () => {
+    setShouldCalculate(true);
+  };
+
+  if (!shouldCalculate && !showOnMount) {
+    return (
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 Bivariate Correlation Matrix</h3>
+        <div className="text-center py-8">
+          <p className="text-gray-600 mb-4">Click to calculate feature correlations</p>
+          <button 
+            onClick={triggerCalculation}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Calculate Correlations
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

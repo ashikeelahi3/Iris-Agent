@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { loadIrisData, calculateStatistics, getFeatureData, countBySpecies } from '../../utils/data';
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+import { 
+  loadIrisData, 
+  calculateStatistics, 
+  getFeatureData, 
+  countBySpecies,
+  extractFeatureFromQuery,
+  getStatsBySpeciesForFeature,
+  formatFeatureStatsResponse 
+} from '../../utils/data';
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -265,10 +274,16 @@ START
 Always respond with a valid JSON object following this structure. Focus on providing clear statistical insights and interpretations.
 `
 
+interface ConversationResponse {
+  reply: string;
+  steps: any[];
+  conversationHistory: ChatCompletionMessageParam[];
+  success: boolean;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { message, conversationHistory = [] } = await request.json();
-
     console.log('Received request:', { message, conversationHistoryLength: conversationHistory.length });
 
     if (!message || typeof message !== 'string') {
@@ -283,15 +298,18 @@ export async function POST(request: NextRequest) {
         { error: 'OpenAI API key is not configured' },
         { status: 500 }
       );
-    }    // Initialize conversation with system prompt
-    // Always ensure system prompt is present for JSON format requirement
-    const messages: Array<{role: 'system' | 'user' | 'assistant', content: string}> = [
+    }
+
+    // Initialize conversation with system prompt
+    const messages: ChatCompletionMessageParam[] = [
       { role: 'system', content: SYSTEM_PROMPT }
     ];
     
     // Add conversation history (excluding any existing system prompts)
-    const historyMessages = conversationHistory.filter((msg: any) => msg.role !== 'system');
-    messages.push(...historyMessages);
+    const historyMessages = conversationHistory.filter((msg: ChatCompletionMessageParam) => msg.role !== 'system');
+    // Only keep the last 10 user/assistant messages to reduce token usage
+    const rollingHistory = historyMessages.slice(-10);
+    messages.push(...rollingHistory);
 
     // Add user message
     const userQuery = {
@@ -311,7 +329,6 @@ export async function POST(request: NextRequest) {
     while (loopCount < maxLoops) {
       loopCount++;
       console.log(`Agent loop iteration ${loopCount}`);
-
       const chat = await client.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: messages,
@@ -324,7 +341,8 @@ export async function POST(request: NextRequest) {
         break;
       }
 
-      console.log('Agent step:', result);      messages.push({ role: 'assistant', content: result });
+      console.log('Agent step:', result);
+      messages.push({ role: 'assistant', content: result } as ChatCompletionMessageParam);
 
       let call;
       try {
@@ -334,7 +352,8 @@ export async function POST(request: NextRequest) {
         throw new Error(`Invalid JSON response from AI: ${result}`);
       }
 
-      steps.push(call);      if (call.type === "output") {
+      steps.push(call);
+      if (call.type === "output") {
         finalOutput = call.output;
         console.log('Found output, ending loop:', finalOutput);
         break;
@@ -344,17 +363,17 @@ export async function POST(request: NextRequest) {
           try {
             const observation = await fn(call.input);
             const obs = { "type": "observation", "observation": observation };
-            messages.push({ role: "user", content: JSON.stringify(obs) });
+            messages.push({ role: "user", content: JSON.stringify(obs) } as ChatCompletionMessageParam);
             console.log('Added observation:', obs);
           } catch (toolError) {
             console.error('Tool execution error:', toolError);
             const errorObs = { "type": "observation", "observation": `Error: ${toolError}` };
-            messages.push({ role: "user", content: JSON.stringify(errorObs) });
+            messages.push({ role: "user", content: JSON.stringify(errorObs) } as ChatCompletionMessageParam);
           }
         } else {
           console.error('Unknown function:', call.function);
           const errorObs = { "type": "observation", "observation": `Error: Unknown function ${call.function}` };
-          messages.push({ role: "user", content: JSON.stringify(errorObs) });
+          messages.push({ role: "user", content: JSON.stringify(errorObs) } as ChatCompletionMessageParam);
         }
       }
     }
@@ -371,12 +390,14 @@ export async function POST(request: NextRequest) {
 
     console.log('Agent execution completed successfully');
 
-    return NextResponse.json({
+    const response: ConversationResponse = {
       reply: finalOutput,
       steps: steps,
       conversationHistory: messages,
       success: true
-    });
+    };
+
+    return NextResponse.json(response);
   } catch (error: any) {
     console.error('AI Agent error:', error);
 

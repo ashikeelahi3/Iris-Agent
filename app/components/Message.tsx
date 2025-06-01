@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 interface MessageProps {
-  content: string;
+  content: string | Record<string, any>;
   isUser: boolean;
   timestamp?: string;
   steps?: Array<{
@@ -16,8 +16,25 @@ interface MessageProps {
   }>;
 }
 
+const formatContent = (content: string | Record<string, any>): string => {
+  if (typeof content === 'string') return content;
+  return Object.entries(content)
+    .map(([key, value]) => {
+      const formattedValue = Array.isArray(value)
+        ? value.map(item => `  - ${item}`).join('\n')
+        : typeof value === 'object' && value !== null
+        ? Object.entries(value)
+            .map(([k, v]) => `  - **${k}**: ${v}`)
+            .join('\n')
+        : String(value);
+      return `**${key}**\n${formattedValue}`;
+    })
+    .join('\n\n');
+};
+
 export default function Message({ content, isUser, timestamp, steps }: MessageProps) {
   const [showSteps, setShowSteps] = useState(false);
+  const formattedContent = formatContent(content);
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
@@ -28,7 +45,7 @@ export default function Message({ content, isUser, timestamp, steps }: MessagePr
             : 'bg-gray-100 text-gray-900 rounded-bl-none'
         }`}
       >
-        <p className="text-sm">{content}</p>
+        <div className="text-sm whitespace-pre-wrap">{formattedContent}</div>
         
         {!isUser && steps && steps.length > 0 && (
           <div className="mt-2">
