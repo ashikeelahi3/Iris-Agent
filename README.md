@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Iris Dataset AI Assistant
 
-## Getting Started
+An AI-powered web application for analyzing the famous Iris dataset using natural language queries. Built with Next.js, OpenAI GPT-4o-mini, and TypeScript.
 
-First, run the development server:
+## Features
+
+- 🤖 **AI-Powered Analysis**: Ask questions in natural language about the Iris dataset
+- 📊 **Statistical Tools**: Mean, median, standard deviation, correlation, and more
+- 🔍 **Data Manipulation**: Filter, sort, group, and explore the dataset
+- 💬 **Chat Interface**: Interactive conversation with step-by-step reasoning
+- 🧠 **Transparent AI**: See the AI's planning, actions, and observations
+
+## Setup Instructions
+
+### 1. Install Dependencies
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Configure OpenAI API Key
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Create or update `.env.local` with your OpenAI API key:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+```
 
-## Learn More
+### 3. Run the Application
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Example Queries
 
-## Deploy on Vercel
+Try asking these questions:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- "What are the basic statistics for sepal length?"
+- "Compare the mean petal width across different species"
+- "What is the correlation between sepal length and petal length?"
+- "Show me the distribution of species in the dataset"
+- "Filter the data to show only setosa species with sepal length > 5"
+- "What are the unique values in the Species column?"
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Available Analysis Tools
+
+### Statistical Analysis
+- Calculate mean, median, standard deviation, variance
+- Find min, max, percentiles
+- Correlation analysis between features
+- Comprehensive descriptive statistics
+
+### Data Manipulation
+- Filter data by species or measurement ranges
+- Sort data by any column
+- Group data by categorical values
+- Select specific columns
+- Get dataset information
+
+### Analysis Tools
+- Cross-tabulation between variables
+- Frequency tables
+- Compare groups across different measurements
+
+## How It Works
+
+The AI assistant follows a structured reasoning process:
+
+1. **START**: Receives your question
+2. **PLAN**: Determines which tools to use
+3. **ACTION**: Executes the appropriate analysis functions
+4. **OBSERVATION**: Reviews the results
+5. **OUTPUT**: Provides a clear, informative answer
+
+## Dataset Information
+
+The Iris dataset contains 150 samples with the following features:
+- **SepalLengthCm**: Sepal length in centimeters
+- **SepalWidthCm**: Sepal width in centimeters
+- **PetalLengthCm**: Petal length in centimeters
+- **PetalWidthCm**: Petal width in centimeters
+- **Species**: Iris species (setosa, versicolor, virginica)
+
+## Technology Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Styling**: Tailwind CSS
+- **AI**: OpenAI GPT-4o-mini
+- **Data Processing**: D3-array, PapaParse
+- **Authentication**: Clerk (configured but not required for basic usage)
+
+## Deployment
+
+The application is ready for deployment on Netlify, Vercel, or any platform that supports Next.js.
+
+Make sure to set the `OPENAI_API_KEY` environment variable in your deployment platform.
