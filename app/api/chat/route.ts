@@ -3,7 +3,8 @@ import OpenAI from 'openai';
 import { loadIrisData, calculateStatistics, getFeatureData, countBySpecies } from '../../utils/data';
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: 'https://api.deepseek.com',
+  apiKey: process.env.DEEPSEEK_API_KEY,
 });
 
 // Statistical Analysis Tools for Iris Dataset
@@ -311,50 +312,103 @@ export async function POST(request: NextRequest) {
     while (loopCount < maxLoops) {
       loopCount++;
       console.log(`Agent loop iteration ${loopCount}`);
-
-      const chat = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: messages,
-        response_format: { type: 'json_object' }
-      });
-
-      const result = chat.choices[0].message.content;
-      if (!result) {
-        console.log('No result from OpenAI, breaking loop');
-        break;
-      }
-
-      console.log('Agent step:', result);      messages.push({ role: 'assistant', content: result });
-
-      let call;
       try {
-        call = JSON.parse(result);
-      } catch (parseError) {
-        console.error('Failed to parse JSON response:', parseError);
-        throw new Error(`Invalid JSON response from AI: ${result}`);
-      }
+        const chat = await client.chat.completions.create({
+          model: 'deepseek-chat',
+          messages: messages,
+          response_format: { type: 'json_object' }
+        });
+        const result = chat.choices[0].message.content;
+        if (!result) {
+          console.log('No result from DeepSeek AI, breaking loop');
+          break;
+        }
+        console.log('Agent step:', result);
+        messages.push({ role: 'assistant', content: result });
 
-      steps.push(call);      if (call.type === "output") {
-        finalOutput = call.output;
-        console.log('Found output, ending loop:', finalOutput);
-        break;
-      } else if (call.type === "action") {
-        const fn = tools[call.function as keyof typeof tools];
-        if (fn) {
-          try {
-            const observation = await fn(call.input);
-            const obs = { "type": "observation", "observation": observation };
-            messages.push({ role: "user", content: JSON.stringify(obs) });
-            console.log('Added observation:', obs);
-          } catch (toolError) {
-            console.error('Tool execution error:', toolError);
-            const errorObs = { "type": "observation", "observation": `Error: ${toolError}` };
+        let call;
+        try {
+          call = JSON.parse(result);
+        } catch (parseError) {
+          console.error('Failed to parse JSON response:', parseError);
+          throw new Error(`Invalid JSON response from AI: ${result}`);
+        }
+
+        steps.push(call);
+        if (call.type === "output") {
+          finalOutput = call.output;
+          console.log('Found output, ending loop:', finalOutput);
+          break;
+        } else if (call.type === "action") {
+          const fn = tools[call.function as keyof typeof tools];
+          if (fn) {
+            try {
+              const observation = await fn(call.input);
+              const obs = { "type": "observation", "observation": observation };
+              messages.push({ role: "user", content: JSON.stringify(obs) });
+              console.log('Added observation:', obs);
+            } catch (toolError) {
+              console.error('Tool execution error:', toolError);
+              const errorObs = { "type": "observation", "observation": `Error: ${toolError}` };
+              messages.push({ role: "user", content: JSON.stringify(errorObs) });
+            }
+          } else {
+            console.error('Unknown function:', call.function);
+            const errorObs = { "type": "observation", "observation": `Error: Unknown function ${call.function}` };
             messages.push({ role: "user", content: JSON.stringify(errorObs) });
           }
+        }
+      } catch (error: any) {
+        if (error.response?.status === 402) {
+          console.warn('DeepSeek AI returned 402 Insufficient Balance. Falling back to OpenAI.');
+          const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+          const openaiChat = await openaiClient.chat.completions.create({
+            model: 'gpt-4',
+            messages: messages
+          });
+          const openaiResult = openaiChat.choices[0].message.content;
+          if (!openaiResult) {
+            console.log('No result from OpenAI, breaking loop');
+            break;
+          }
+          console.log('OpenAI step:', openaiResult);
+          messages.push({ role: 'assistant', content: openaiResult });
+
+          let call;
+          try {
+            call = JSON.parse(openaiResult);
+          } catch (parseError) {
+            console.error('Failed to parse JSON response from OpenAI:', parseError);
+            throw new Error(`Invalid JSON response from OpenAI: ${openaiResult}`);
+          }
+
+          steps.push(call);
+          if (call.type === "output") {
+            finalOutput = call.output;
+            console.log('Found output, ending loop:', finalOutput);
+            break;
+          } else if (call.type === "action") {
+            const fn = tools[call.function as keyof typeof tools];
+            if (fn) {
+              try {
+                const observation = await fn(call.input);
+                const obs = { "type": "observation", "observation": observation };
+                messages.push({ role: "user", content: JSON.stringify(obs) });
+                console.log('Added observation:', obs);
+              } catch (toolError) {
+                console.error('Tool execution error:', toolError);
+                const errorObs = { "type": "observation", "observation": `Error: ${toolError}` };
+                messages.push({ role: "user", content: JSON.stringify(errorObs) });
+              }
+            } else {
+              console.error('Unknown function:', call.function);
+              const errorObs = { "type": "observation", "observation": `Error: Unknown function ${call.function}` };
+              messages.push({ role: "user", content: JSON.stringify(errorObs) });
+            }
+          }
         } else {
-          console.error('Unknown function:', call.function);
-          const errorObs = { "type": "observation", "observation": `Error: Unknown function ${call.function}` };
-          messages.push({ role: "user", content: JSON.stringify(errorObs) });
+          console.error('Unexpected error during agent execution:', error);
+          throw error;
         }
       }
     }
